@@ -1,0 +1,46 @@
+#!/bin/bash -x
+#
+#   Copyright 2013 Geodelic
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License. 
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#
+
+kill_chef=0
+
+git diff --name-only HEAD@{1} HEAD | grep -q libraries\\\|bootstrap &&
+    pgrep -lf ruby.*\/chef-solo$ && kill_chef=1 #kill chef since it is running as a daemon
+
+
+if [ $kill_chef -eq 1 ]; then
+    chef_running=0
+    pgrep chef-solo && chef_running=1
+    if [ $chef_running -eq 1 ]; then
+        #if we've gotten this far, then we are definitely killing chef
+        #which is going to kill us in turn... trap the kill signal to start chef again
+        #use sudo -i to reset the environment.
+        <% unless node.attribute? "upstart_chef" and node.upstart_chef %>
+        trap 'sudo -i "chef-solo"' HUP INT TERM EXIT
+        <% end %>
+        pkill chef-solo
+        for (( i=1; i<=300; i++ )) ; do
+            #waiting for chef-solo to quit
+            pgrep chef-solo && sleep 2 || chef_running=0; break
+        done
+        if [ $chef_running -eq 1 ]; then
+            #tired of waiting. DIE!
+            pkill -9 chef-solo
+        fi
+    fi
+fi
+
