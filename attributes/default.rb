@@ -16,15 +16,5 @@
 #
 #
 
-
-default.sdb_domain = "chef"
-
-
-#?
-default.pubkey_folder = 'public_keys'
-
-
-
-#TODO: turn this into an ohai plugin
-default.ec2.region = ec2.placement_availability_zone[/^([a-zA-Z]*-[^-]+-[0-9]+)/,1] if attribute?("ec2")
+default.env = "dev"
 

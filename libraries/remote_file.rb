@@ -15,28 +15,31 @@
 #
 #
 
+
 require 'fileutils'
 require 'pathname'
-require 'moneta/basic_file'
+#require 'moneta/basic_file'
+
 
 begin
-    require 'fog/aws'
-    FOGFOUND = true unless defined? FOGFOUND
+  require 'fog/aws'
+  FOGFOUND = true unless defined? FOGFOUND
 rescue LoadError => e
-    Chef::Log.warn("Fog library not found. This is fine in development environments, but it is required in production.")
-    FOGFOUND = false unless defined? FOGFOUND
+  Chef::Log.warn("Fog library not found. This is fine in development environments, but it is required in production.")
+  FOGFOUND = false unless defined? FOGFOUND
 end
 
 
 class Chef::Resource::File
-    def checksum(arg=nil)
-      set_or_return(
-        :checksum,
-        arg,
-        :regex => /^[a-zA-Z0-9]{32,64}$/
-      )
-    end
+  def checksum(arg=nil)
+    set_or_return(
+      :checksum,
+      arg,
+      :regex => /^[a-zA-Z0-9]{32,64}$/
+    )
+  end
 end
+
 
 class Chef::Resource
   class S3File < Chef::Resource::RemoteFile
@@ -104,38 +107,38 @@ class Chef::Resource
   end
 end
 
-# release version of moneta has bug that doesn't return data value
-class Moneta::BasicFile
-  def [](key)
-    if ::File.exist?(path(key))
-      data = raw_get(key)
-      if @expires
-        if data[:expires_at].nil? || data[:expires_at] > Time.now
-          data[:value]
-        else
-          delete!(key)
-        end
-      else
-        data
-      end
-    end
-  end
-end
+ #release version of moneta has bug that doesn't return data value
+#class Moneta::BasicFile
+  #def [](key)
+    #if ::File.exist?(path(key))
+      #data = raw_get(key)
+      #if @expires
+        #if data[:expires_at].nil? || data[:expires_at] > Time.now
+          #data[:value]
+        #else
+          #delete!(key)
+        #end
+      #else
+        #data
+      #end
+    #end
+  #end
+#end
 
-class Chef::ChecksumCache
-  def generate_md5_checksum_for_file(file)
-    key = generate_key(file)
-    fstat = File.stat(file)
-    lookup_result = lookup_checksum(key, fstat)
-    return lookup_result if lookup_result
+#class Chef::ChecksumCache
+  #def generate_md5_checksum_for_file(file)
+    #key = generate_key(file)
+    #fstat = File.stat(file)
+    #lookup_result = lookup_checksum(key, fstat)
+    #return lookup_result if lookup_result
 
 
-    checksum = checksum_file(file, Digest::MD5.new)
-    moneta.store(key, {"mtime" => fstat.mtime.to_f, "checksum" => checksum})
-    validate_checksum(key)
-    checksum
-  end
-end
+    #checksum = checksum_file(file, Digest::MD5.new)
+    #moneta.store(key, {"mtime" => fstat.mtime.to_f, "checksum" => checksum})
+    #validate_checksum(key)
+    #checksum
+  #end
+#end
 
 class DownloadError < RuntimeError
 end
@@ -160,9 +163,9 @@ class Chef::Provider
       bucket = get_bucket
       # First, see if there is a new archive to download.
       artifacts = bucket.files.all(
-          :prefix => prefix
+        :prefix => prefix
       ).to_a.select{ |k|
-          not k.key.split('/')[-1].match(@new_resource.key_format).nil?
+        not k.key.split('/')[-1].match(@new_resource.key_format).nil?
       }.sort { |a,b| b.key <=> a.key }
 
       raise "no artifacts found!" if artifacts.empty?
@@ -175,7 +178,6 @@ class Chef::Provider
     end
 
     def get_bucket
-      #storage = Fog::Storage.new(get_creds().merge(:provider => 'AWS'))
       storage = Fog::Storage.new(
         (Chef::Config[:use_iam_role] ? {use_iam_profile: true} : _get_boto_creds()).merge(:provider => 'AWS')
       )
@@ -216,8 +218,8 @@ class Chef::Provider
                     remote_file.collection.get(remote_file.identity,
                                                "Range" => "bytes=%d-%d" % [bytes_begin, bytes_end]
                                               ) do |chunk, remaining, total|
-                      local_file.write(chunk)
-                    end
+                                                local_file.write(chunk)
+                                              end
                   rescue => e
                     curthread[:final_pos] = local_file.pos
                     raise e
@@ -263,8 +265,8 @@ class Chef::Provider
               end unless threads.reject { |t| t[:final_pos] == (t[:bytes_end] + 1) }.empty?
             end
           rescue => e
-              ::File.delete( @new_resource.path ) if ::File.exists?( @new_resource.path )
-              raise e
+            ::File.delete( @new_resource.path ) if ::File.exists?( @new_resource.path )
+            raise e
           end
           FileUtils.touch @new_resource.path
           @current_resource.checksum(checksum(@current_resource.path)) if ::File.exist?(@current_resource.path)
@@ -296,7 +298,7 @@ class Chef::Provider
             Chef::Log.debug("candidate_file's metadata is missing md5sum. consider adding it.")
             Chef::Log.debug("using filesize and timestamp to determine if remote file has changed.")
             return ( candidate_file.content_length == ::File.size(@new_resource.path) and \
-              candidate_file.last_modified < ::File.mtime(@new_resource.path) )
+                    candidate_file.last_modified < ::File.mtime(@new_resource.path) )
           end
         else
           chksum = candidate_file.etag

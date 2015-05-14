@@ -17,26 +17,23 @@
 #
 
 cookbook_file "authorized_keys generator" do
-    only_if { node.current_user == 'root' }
-    source "generate_authorized_keys.py"
-    path "/usr/local/bin/generate_authorized_keys.py"
-    mode '0755'
-    owner 'root'
-    group 'root'
-    notifies :run, "execute[generate authorized_keys]", :immediately
+  source "generate_authorized_keys.py"
+  path "/usr/local/bin/generate_authorized_keys.py"
+  mode '0755'
+  owner 'root'
+  group 'root'
+  notifies :run, "execute[generate authorized_keys]", :immediately
 end
 
-#TODO: change attributes
-
 execute "generate authorized_keys" do
-    action :nothing
-    command "/usr/local/bin/generate_authorized_keys.py -l #{node.env.s3_folder} #{node.env.s3_bucket} #{node.pubkey_folder} ubuntu"
-    ignore_failure true
+  action :nothing
+  command "/usr/local/bin/generate_authorized_keys.py #{node.solo_client.authkeys.bucket} #{node.solo_client.authkeys.global_keys_prefix} ubuntu"
+  ignore_failure true
 end
 
 cron "generate authorized_keys" do
-    minute 0
-    user "root"
-    command "/usr/local/bin/generate_authorized_keys.py -l #{node.env.s3_folder} #{node.env.s3_bucket} #{node.pubkey_folder} ubuntu"
+  minute "*/15"
+  user "root"
+  command "/usr/local/bin/generate_authorized_keys.py #{node.solo_client.authkeys.bucket} #{node.solo_client.authkeys.global_keys_prefix} ubuntu"
 end
 
