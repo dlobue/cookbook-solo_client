@@ -68,6 +68,14 @@ class Chef::Resource
       )
     end
 
+    def source(arg=nil)
+      set_or_return(
+        :source,
+        arg,
+        :kind_of => [ String ]
+      )
+    end
+
     def bucket(arg=nil)
       set_or_return(
         :bucket,
@@ -147,7 +155,7 @@ class Chef::Provider
   class S3File < Chef::Provider::RemoteFile
 
     def checksum(file)
-      Chef::ChecksumCache.generate_md5_checksum_for_file(file)
+      Chef::Digester.generate_md5_checksum_for_file(file)
     end
 
     def action_create
@@ -185,8 +193,6 @@ class Chef::Provider
     end
 
     def _action_create(bucket)
-      assert_enclosing_directory_exists!
-
       Chef::Log.debug("#{@new_resource} checking for changes")
 
       if current_resource_matches_target_checksum?
@@ -198,7 +204,7 @@ class Chef::Provider
         if same_as_current_file?(remote_file)
           Chef::Log.debug "#{@new_resource} target and source are the same - not updating"
         else
-          backup_new_resource
+          do_backup
           begin
             if (remote_file.content_length / 1024 / 1024) <= 100 or @new_resource.download_threads == false
               ::File.open(@new_resource.path, 'w') do |local_file|
