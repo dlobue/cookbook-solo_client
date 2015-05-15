@@ -18,7 +18,6 @@
 
 require 'fileutils'
 require 'pathname'
-#require 'moneta/basic_file'
 
 
 begin
@@ -115,38 +114,6 @@ class Chef::Resource
   end
 end
 
- #release version of moneta has bug that doesn't return data value
-#class Moneta::BasicFile
-  #def [](key)
-    #if ::File.exist?(path(key))
-      #data = raw_get(key)
-      #if @expires
-        #if data[:expires_at].nil? || data[:expires_at] > Time.now
-          #data[:value]
-        #else
-          #delete!(key)
-        #end
-      #else
-        #data
-      #end
-    #end
-  #end
-#end
-
-#class Chef::ChecksumCache
-  #def generate_md5_checksum_for_file(file)
-    #key = generate_key(file)
-    #fstat = File.stat(file)
-    #lookup_result = lookup_checksum(key, fstat)
-    #return lookup_result if lookup_result
-
-
-    #checksum = checksum_file(file, Digest::MD5.new)
-    #moneta.store(key, {"mtime" => fstat.mtime.to_f, "checksum" => checksum})
-    #validate_checksum(key)
-    #checksum
-  #end
-#end
 
 class DownloadError < RuntimeError
 end
